@@ -1,34 +1,52 @@
-Canton beginner guide
+# Canton beginner guide
+
 This document explains a simple local Canton setup using the sample Daml project in this workspace.
 
-Prerequisites
+## Prerequisites
+
 Before starting, make sure you have the following installed:
 
-Daml SDK / DPM version 3.5.11
-Java 17 or newer
-A terminal such as PowerShell or Command Prompt
-Sample project used in this walkthrough
+- Daml SDK / DPM version 3.5.11
+- Java 17 or newer
+- A terminal such as PowerShell or Command Prompt
+
+## Sample project used in this walkthrough
+
 I created a sample Daml project using:
 
+```bash
 dpm new DamlFirstApp
-The default template created a basic Daml module in DamlFirstApp/main/daml/Main.daml.
+```
+
+The default template created a basic Daml module in [DamlFirstApp/main/daml/Main.daml](../../DamlFirstApp/main/daml/Main.daml).
 
 After that, I built the project with:
 
+```bash
 dpm build
+```
+
 This generated the DAR file:
 
-DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar
+- [DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar](../../DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar)
+
 That DAR file is then used by the Canton bootstrap script to upload the Daml package into the local network.
 
-1. Setting up a node
+---
+
+## 1. Setting up a node
+
 A Canton node is made of several components working together:
 
-Sequencer: orders transactions and creates shared ledger history
-Mediator: coordinates multi-party workflows
-Participant: hosts ledger state for parties and exposes APIs
+- Sequencer: orders transactions and creates shared ledger history
+- Mediator: coordinates multi-party workflows
+- Participant: hosts ledger state for parties and exposes APIs
+
 In this example, the setup is defined inline below.
 
+---
+
+```hocon
 // File: examples/example- 1 participant/canton.conf
 canton {
   sequencers {
@@ -53,8 +71,10 @@ canton {
     }
   }
 }
-// File: examples/example- 1 participant/init.canton
+```
 
+// File: examples/example- 1 participant/init.canton
+```scala
 import com.digitalasset.canton.config.RequireTypes.PositiveInt
 import com.digitalasset.canton.admin.api.client.data.StaticSynchronizerParameters
 import com.digitalasset.canton.version.ProtocolVersion
@@ -108,8 +128,10 @@ println("===          SANDBOX SYSTEM READY         ===")
 println("=============================================")
 println(s"participantNode1: parties=${participantNode1.parties.list().map(_.party.toProtoPrimitive)}")
 println(s"Onboarded Users : ${participantNode1.ledger_api.users.list().users.map(_.id)}")
-// File: DamlFirstApp/main/daml/Main.daml
+```
 
+// File: DamlFirstApp/main/daml/Main.daml
+```daml
 module Main where
 
 type AssetId = ContractId Asset
@@ -129,53 +151,78 @@ template Asset
       controller owner
       do create this with
            owner = newOwner
-Start the local network
+```
+---
+
+### Start the local network
+
 Run the following command from the project root:
 
+```powershell
 java -jar bin\canton.jar -c "examples\example- 1 participant\canton.conf" --bootstrap "examples\example- 1 participant\init.canton"
-What this command does
-The bootstrap script:
+```
 
-starts the local node infrastructure
-creates the synchronizer named "global"
-connects the participant to the synchronizer
-uploads the Daml DAR file
-creates ledger parties
-creates sample users
-2. How user onboarding works
+### What this command does
+
+The bootstrap script:
+1. starts the local node infrastructure
+2. creates the synchronizer named "global"
+3. connects the participant to the synchronizer
+4. uploads the Daml DAR file
+5. creates ledger parties
+6. creates sample users
+
+---
+
+## 2. How user onboarding works
+
 In Canton, onboarding usually happens in two layers:
 
-Party onboarding
+1. Party onboarding
+   - A party is a logical identity on the ledger
+   - Example: "Alice" or "AssetIssuer"
 
-A party is a logical identity on the ledger
-Example: "Alice" or "AssetIssuer"
-User onboarding
+2. User onboarding
+   - A user is an API account that can submit commands
+   - The user is linked to a party and granted rights
 
-A user is an API account that can submit commands
-The user is linked to a party and granted rights
 The sample bootstrap script creates:
+- the party "AssetIssuer"
+- the party "Alice"
+- the users "issuer_user" and "alice_user"
 
-the party "AssetIssuer"
-the party "Alice"
-the users "issuer_user" and "alice_user"
 It also grants the required rights to let those users act on behalf of their parties.
 
-3. Entry points into the Canton network
+---
+
+## 3. Entry points into the Canton network
+
 There are three main ways to interact with the network.
 
-A. Ledger API (gRPC, port 5011)
+### A. Ledger API (gRPC, port 5011)
+
 This is the main programming interface for backend systems and service-based integrations.
 
-Infra setup
-Make sure your participant node in examples/example- 1 participant/canton.conf exposes the ledger API on port 5011.
-Start Canton with the bootstrap configuration:
+#### Infra setup
+- Make sure your participant node in [examples/example- 1 participant/canton.conf](canton.conf) exposes the ledger API on port 5011.
+- Start Canton with the bootstrap configuration:
+
+```powershell
 java -jar bin\canton.jar -c "examples\example- 1 participant\canton.conf" --bootstrap "examples\example- 1 participant\init.canton"
-After the node is up, upload your Daml package to the participant using:
+```
+
+- After the node is up, upload your Daml package to the participant using:
+
+```scala
 participantNode1.dars.upload("DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar")
-Client setup
-This is the best option for backend services such as Spring Boot applications.
-Typical Java client libraries include the Daml bindings and gRPC dependencies.
-Example Maven dependencies:
+```
+
+#### Client setup
+- This is the best option for backend services such as Spring Boot applications.
+- Typical Java client libraries include the Daml bindings and gRPC dependencies.
+- Example Maven dependencies:
+
+```xml
 <dependency>
   <groupId>com.daml</groupId>
   <artifactId>bindings-java</artifactId>
@@ -185,48 +232,93 @@ Example Maven dependencies:
   <groupId>io.grpc</groupId>
   <artifactId>grpc-netty-shaded</artifactId>
 </dependency>
-Example Java usage:
+```
+
+- Example Java usage:
+
+```java
 DamlLedgerClient client = DamlLedgerClient.newBuilder("localhost", 5011).build();
 client.connect();
-B. HTTP Ledger JSON API (REST, port 7575)
+```
+
+### B. HTTP Ledger JSON API (REST, port 7575)
+
 This is the easiest entry point for web apps, mobile apps, Postman, or Swagger-based integrations.
 
-Infra setup
-The sample configuration already exposes the HTTP API on port 7575 through the participant node in examples/example- 1 participant/canton.conf.
-When Canton starts, this endpoint becomes available automatically.
-You can browse the generated API docs at:
+#### Infra setup
+- The sample configuration already exposes the HTTP API on port 7575 through the participant node in [examples/example- 1 participant/canton.conf](canton.conf).
+- When Canton starts, this endpoint becomes available automatically.
+- You can browse the generated API docs at:
+
+```text
 http://localhost:7575/docs/openapi
-Client setup
-You can use Postman, Swagger, or simple curl commands to call the REST endpoints.
-Example:
+```
+
+#### Client setup
+- You can use Postman, Swagger, or simple curl commands to call the REST endpoints.
+- Example:
+
+```bash
 curl http://localhost:7575/v2/state/ledger-end
-C. Admin API (gRPC, port 5012)
+```
+
+### C. Admin API (gRPC, port 5012)
+
 This is used by operators and administrators for node management and operational tasks.
 
-Infra setup
-The participant node exposes the admin API on port 5012 in examples/example- 1 participant/canton.conf.
-This API is mainly for administration and is often restricted in production using firewalls or private networks.
-Client setup
-Administrators commonly use the Canton shell or remote admin commands.
-Example command for remote-style admin access:
+#### Infra setup
+- The participant node exposes the admin API on port 5012 in [examples/example- 1 participant/canton.conf](canton.conf).
+- This API is mainly for administration and is often restricted in production using firewalls or private networks.
+
+#### Client setup
+- Administrators commonly use the Canton shell or remote admin commands.
+- Example command for remote-style admin access:
+
+```powershell
 java -jar bin\canton.jar -C canton.remote-participants.participantNode1.admin-api.port=5012 -C canton.remote-participants.participantNode1.ledger-api.port=5011
-4. Useful first steps for a beginner
+```
+
+---
+
+## 4. Useful first steps for a beginner
+
 Here are a few simple commands you can try after startup:
 
-Check network health
+### Check network health
+```scala
 health.status
-Check participant status
+```
+
+### Check participant status
+```scala
 participantNode1.health.status
-List parties
+```
+
+### List parties
+```scala
 participantNode1.parties.list()
-List users
+```
+
+### List users
+```scala
 participantNode1.ledger_api.users.list()
-Check the current ledger end
+```
+
+### Check the current ledger end
+```bash
 curl http://localhost:7575/v2/state/ledger-end
-Fetch active contracts
-First get the current ledger offset:
+```
+
+### Fetch active contracts
+1. First get the current ledger offset:
+
+```bash
 curl http://localhost:7575/v2/state/ledger-end
-Then pass that offset to the active-contracts API:
+```
+
+2. Then pass that offset to the active-contracts API:
+
+```bash
 curl -X POST http://localhost:7575/v2/state/active-contracts?limit=7946&stream_idle_timeout_ms=7946 \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
@@ -238,14 +330,21 @@ curl -X POST http://localhost:7575/v2/state/active-contracts?limit=7946&stream_i
       }
     }
   }'
-Replace the value 22 with the offset returned by the ledger-end API.
+```
 
-Create a contract
-First, find the party details for your onboarded users. The primaryParty from the user response is the value to use in the contract payload.
+> Replace the value `22` with the offset returned by the ledger-end API.
+
+### Create a contract
+1. First, find the party details for your onboarded users. The `primaryParty` from the user response is the value to use in the contract payload.
+
+```bash
 curl http://localhost:7575/v2/users/alice_user \
   -H "Accept: application/json"
+```
+
 Example response:
 
+```json
 {
   "user": {
     "id": "alice_user",
@@ -253,12 +352,23 @@ Example response:
     "isDeactivated": false
   }
 }
-Find the template ID from the uploaded DAR package in the Canton console:
+```
+
+2. Find the template ID from the uploaded DAR package in the Canton console:
+
+```scala
 participantNode1.dars.list()
+```
+
 You will see the uploaded DAR. In this example, the relevant template ID is based on the uploaded DAR package:
 
+```text
 98c1dc87eae3463fd1148d9008d283086b38f82d1f821fa4e99b1c550fc974a7
-Submit a create-command request:
+```
+
+3. Submit a create-command request:
+
+```bash
 curl --location 'http://localhost:7575/v2/commands/submit-and-wait' \
   --header 'Content-Type: application/json' \
   --header 'Accept: application/json' \
@@ -283,23 +393,39 @@ curl --location 'http://localhost:7575/v2/commands/submit-and-wait' \
     ]
   }
   '
-View user rights
+```
+
+### View user rights
+```scala
 participantNode1.ledger_api.users.rights.list(id = "alice_user")
-Grant user rights
+```
+
+### Grant user rights
+```scala
 participantNode1.ledger_api.users.rights.grant(
   id = "alice_user",
   actAs = Set(aliceParty),
   readAs = Set(aliceParty)
 )
-Disable a party
+```
+
+### Disable a party
+```scala
 val aliceParty = participantNode1.parties.list(filterParty = "Alice").head.party
 participantNode1.parties.disable(aliceParty)
-Note: a party can only be disabled when it is no longer a stakeholder in any active unarchived contract.
+```
 
-Delete a user
+> Note: a party can only be disabled when it is no longer a stakeholder in any active unarchived contract.
+
+### Delete a user
+```scala
 participantNode1.ledger_api.users.delete(id = "alice_user")
-Deactivate a user
+```
+
+### Deactivate a user
+```scala
 participantNode1.ledger_api.users.update(
   id = "alice_user",
   user => user.copy(isDeactivated = true)
 )
+```
