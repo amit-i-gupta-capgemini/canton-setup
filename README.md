@@ -42,117 +42,9 @@ A Canton node is made of several components working together:
 
 In this example, the setup is defined inline below.
 
-<a id="canton-conf"></a>
----
-
-```hocon
-// File: examples/example- 1 participant/canton.conf
-canton {
-  sequencers {
-    globalSequencer {
-      public-api { address = "0.0.0.0", port = 5001 }
-      admin-api  { address = "0.0.0.0", port = 5002 }
-      storage.type = memory
-    }
-  }
-  mediators {
-    globalMediator {
-      admin-api { address = "0.0.0.0", port = 5202 }
-      storage.type = memory
-    }
-  }
-  participants {
-    participantNode1 {
-      ledger-api      { address = "0.0.0.0", port = 5011 }
-      admin-api       { address = "0.0.0.0", port = 5012 }
-      http-ledger-api { address = "0.0.0.0", port = 7575 }
-      storage.type = memory
-    }
-  }
-}
-```
-
-<a id="init-canton"></a>
-// File: examples/example- 1 participant/init.canton
-```scala
-import com.digitalasset.canton.config.RequireTypes.PositiveInt
-import com.digitalasset.canton.admin.api.client.data.StaticSynchronizerParameters
-import com.digitalasset.canton.version.ProtocolVersion
-
-// 1. Boot up the node infrastructure
-nodes.local.start()
-
-// 2. Initialize the blind coordination network (Sequencer + Mediator)
-bootstrap.synchronizer(
-  synchronizerName = "global",
-  sequencers = Seq(globalSequencer),
-  mediators = Seq(globalMediator),
-  synchronizerOwners = Seq(globalSequencer, globalMediator),
-  synchronizerThreshold = PositiveInt.one,
-  staticSynchronizerParameters = StaticSynchronizerParameters.defaultsWithoutKMS(ProtocolVersion.forSynchronizer)
-)
-
-// 3. Connect the physical participant node to the network grid
-participantNode1.synchronizers.connect_local(globalSequencer, alias = "global")
-
-// 4. Upload your compiled Daml 3.x smart contract DAR file
-println("--- Uploading DamlFirstApp-main DAR Package ---")
-participantNode1.dars.upload("DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar")
-
-// 5. Allocate the logical network identities required by Main.daml
-println("--- Provisioning Ledger Parties ---")
-val issuerParty = participantNode1.parties.enable("AssetIssuer", synchronizer = Some("global"), synchronizeParticipants = Seq(participantNode1))
-val aliceParty  = participantNode1.parties.enable("Alice", synchronizer = Some("global"), synchronizeParticipants = Seq(participantNode1))
-
-// 6. Onboard individual User Accounts with explicit Ledger API capabilities
-println("--- Onboarding User Accounts & Granting Rights ---")
-
-// Create Issuer User Account
-participantNode1.ledger_api.users.create(
-  id = "issuer_user",
-  primaryParty = Some(issuerParty),
-  actAs = Set(issuerParty),
-  readAs = Set(issuerParty)
-)
-
-// Create Alice User Account
-participantNode1.ledger_api.users.create(
-  id = "alice_user",
-  primaryParty = Some(aliceParty),
-  actAs = Set(aliceParty),
-  readAs = Set(aliceParty)
-)
-
-println("=============================================")
-println("===          SANDBOX SYSTEM READY         ===")
-println("=============================================")
-println(s"participantNode1: parties=${participantNode1.parties.list().map(_.party.toProtoPrimitive)}")
-println(s"Onboarded Users : ${participantNode1.ledger_api.users.list().users.map(_.id)}")
-```
-
-<a id="main-daml"></a>
-// File: DamlFirstApp/main/daml/Main.daml
-```daml
-module Main where
-
-type AssetId = ContractId Asset
-
-template Asset
-  with
-    issuer : Party
-    owner  : Party
-    name   : Text
-  where
-    ensure name /= ""
-    signatory issuer
-    observer owner
-    choice Give : AssetId
-      with
-        newOwner : Party
-      controller owner
-      do create this with
-           owner = newOwner
-```
+- [canton.conf](#canton-conf)
+- [init.canton](#init-canton)
+- [Main.daml](#main-daml)
 ---
 
 ### Start the local network
@@ -460,11 +352,9 @@ participantNode1.ledger_api.users.update(
 
 The main configuration and bootstrap files used in this walkthrough are collected here for quick reference:
 
-- [canton.conf](#canton-conf)
-- [init.canton](#init-canton)
-- [Main.daml](#main-daml)
 
-### [canton.conf](#canton-conf)
+- [canton.conf](#canton-conf)
+<a id="canton-conf"></a>
 ```hocon
 canton {
   sequencers {
@@ -491,7 +381,9 @@ canton {
 }
 ```
 
-### [init.canton](#init-canton)
+
+- [init.canton](#init-canton)
+<a id="init-canton"></a>
 ```scala
 import com.digitalasset.canton.config.RequireTypes.PositiveInt
 import com.digitalasset.canton.admin.api.client.data.StaticSynchronizerParameters
@@ -534,7 +426,9 @@ participantNode1.ledger_api.users.create(
 )
 ```
 
-### [Main.daml](#main-daml)
+
+- [Main.daml](#main-daml)
+<a id="main-daml"></a>
 ```daml
 module Main where
 
