@@ -28,7 +28,7 @@ dpm build
 
 This generated the DAR file:
 
-- [DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar](../../DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar)
+- DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar
 
 That DAR file is then used by the Canton bootstrap script to upload the Daml package into the local network.
 
