@@ -28,15 +28,12 @@ dpm build
 
 This generated the DAR file:
 
-- DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar
+- [DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar](../../DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar)
 
 That DAR file is then used by the Canton bootstrap script to upload the Daml package into the local network.
 
 ---
 
-<a id="canton-conf"></a>
-```hocon
-// File: examples/example- 1 participant/canton.conf
 A Canton node is made of several components working together:
 
 - Sequencer: orders transactions and creates shared ledger history
@@ -45,6 +42,7 @@ A Canton node is made of several components working together:
 
 In this example, the setup is defined inline below.
 
+<a id="canton-conf"></a>
 ---
 
 ```hocon
@@ -308,9 +306,7 @@ participantNode1.parties.list()
 participantNode1.ledger_api.users.list()
 ```
 
-
 ### Create users (Scala, via Canton console)
-<a id="create-users"></a>
 Use these commands in the Canton console (or include them in a bootstrap script) to create the sample users:
 
 ```scala
@@ -330,6 +326,7 @@ participantNode1.ledger_api.users.create(
   readAs = Set(aliceParty)
 )
 ```
+<a id="create-users"></a>
 
 ### Check the current ledger end
 ```bash
