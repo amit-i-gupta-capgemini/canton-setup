@@ -308,7 +308,9 @@ participantNode1.parties.list()
 participantNode1.ledger_api.users.list()
 ```
 
+
 ### Create users (Scala, via Canton console)
+<a id="create-users"></a>
 Use these commands in the Canton console (or include them in a bootstrap script) to create the sample users:
 
 ```scala
@@ -328,7 +330,6 @@ participantNode1.ledger_api.users.create(
   readAs = Set(aliceParty)
 )
 ```
-<a id="create-users"></a>
 
 ### Check the current ledger end
 ```bash
