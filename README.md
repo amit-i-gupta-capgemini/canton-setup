@@ -18,7 +18,7 @@ I created a sample Daml project using:
 dpm new DamlFirstApp
 ```
 
-The default template created a basic Daml module in [DamlFirstApp/main/daml/Main.daml](../../DamlFirstApp/main/daml/Main.daml).
+The default template created a basic Daml module in [Main.daml](#main-daml).
 
 After that, I built the project with:
 
@@ -34,8 +34,9 @@ That DAR file is then used by the Canton bootstrap script to upload the Daml pac
 
 ---
 
-## 1. Setting up a node
-
+<a id="canton-conf"></a>
+```hocon
+// File: examples/example- 1 participant/canton.conf
 A Canton node is made of several components working together:
 
 - Sequencer: orders transactions and creates shared ledger history
@@ -73,6 +74,7 @@ canton {
 }
 ```
 
+<a id="init-canton"></a>
 // File: examples/example- 1 participant/init.canton
 ```scala
 import com.digitalasset.canton.config.RequireTypes.PositiveInt
@@ -130,6 +132,7 @@ println(s"participantNode1: parties=${participantNode1.parties.list().map(_.part
 println(s"Onboarded Users : ${participantNode1.ledger_api.users.list().users.map(_.id)}")
 ```
 
+<a id="main-daml"></a>
 // File: DamlFirstApp/main/daml/Main.daml
 ```daml
 module Main where
@@ -192,6 +195,7 @@ The sample bootstrap script creates:
 - the users "issuer_user" and "alice_user"
 
 It also grants the required rights to let those users act on behalf of their parties.
+See the [Create users](#create-users) section and the inline file references: [canton.conf](#canton-conf), [init.canton](#init-canton), [Main.daml](#main-daml).
 
 ---
 
@@ -204,7 +208,7 @@ There are three main ways to interact with the network.
 This is the main programming interface for backend systems and service-based integrations.
 
 #### Infra setup
-- Make sure your participant node in [examples/example- 1 participant/canton.conf](canton.conf) exposes the ledger API on port 5011.
+- Make sure your participant node in [canton.conf](#canton-conf) exposes the ledger API on port 5011.
 - Start Canton with the bootstrap configuration:
 
 ```powershell
@@ -303,6 +307,28 @@ participantNode1.parties.list()
 ```scala
 participantNode1.ledger_api.users.list()
 ```
+
+### Create users (Scala, via Canton console)
+Use these commands in the Canton console (or include them in a bootstrap script) to create the sample users:
+
+```scala
+// Create Issuer User Account
+participantNode1.ledger_api.users.create(
+  id = "issuer_user",
+  primaryParty = Some(issuerParty),
+  actAs = Set(issuerParty),
+  readAs = Set(issuerParty)
+)
+
+// Create Alice User Account
+participantNode1.ledger_api.users.create(
+  id = "alice_user",
+  primaryParty = Some(aliceParty),
+  actAs = Set(aliceParty),
+  readAs = Set(aliceParty)
+)
+```
+<a id="create-users"></a>
 
 ### Check the current ledger end
 ```bash
