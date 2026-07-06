@@ -248,7 +248,7 @@ client.connect();
 This is the easiest entry point for web apps, mobile apps, Postman, or Swagger-based integrations.
 
 #### Infra setup
-- The sample configuration already exposes the HTTP API on port 7575 through the participant node in [examples/example- 1 participant/canton.conf](canton.conf).
+- The sample configuration already exposes the HTTP API on port 7575 through the participant node in [canton.conf](#canton-conf).
 - When Canton starts, this endpoint becomes available automatically.
 - You can browse the generated API docs at:
 
@@ -269,7 +269,7 @@ curl http://localhost:7575/v2/state/ledger-end
 This is used by operators and administrators for node management and operational tasks.
 
 #### Infra setup
-- The participant node exposes the admin API on port 5012 in [examples/example- 1 participant/canton.conf](canton.conf).
+- The participant node exposes the admin API on port 5012 in [canton.conf](#canton-conf).
 - This API is mainly for administration and is often restricted in production using firewalls or private networks.
 
 #### Client setup
@@ -452,4 +452,107 @@ participantNode1.ledger_api.users.update(
   id = "alice_user",
   user => user.copy(isDeactivated = true)
 )
+```
+
+---
+
+## Source files
+
+The main configuration and bootstrap files used in this walkthrough are collected here for quick reference:
+
+- [canton.conf](#canton-conf)
+- [init.canton](#init-canton)
+- [Main.daml](#main-daml)
+
+### [canton.conf](#canton-conf)
+```hocon
+canton {
+  sequencers {
+    globalSequencer {
+      public-api { address = "0.0.0.0", port = 5001 }
+      admin-api  { address = "0.0.0.0", port = 5002 }
+      storage.type = memory
+    }
+  }
+  mediators {
+    globalMediator {
+      admin-api { address = "0.0.0.0", port = 5202 }
+      storage.type = memory
+    }
+  }
+  participants {
+    participantNode1 {
+      ledger-api      { address = "0.0.0.0", port = 5011 }
+      admin-api       { address = "0.0.0.0", port = 5012 }
+      http-ledger-api { address = "0.0.0.0", port = 7575 }
+      storage.type = memory
+    }
+  }
+}
+```
+
+### [init.canton](#init-canton)
+```scala
+import com.digitalasset.canton.config.RequireTypes.PositiveInt
+import com.digitalasset.canton.admin.api.client.data.StaticSynchronizerParameters
+import com.digitalasset.canton.version.ProtocolVersion
+
+nodes.local.start()
+
+bootstrap.synchronizer(
+  synchronizerName = "global",
+  sequencers = Seq(globalSequencer),
+  mediators = Seq(globalMediator),
+  synchronizerOwners = Seq(globalSequencer, globalMediator),
+  synchronizerThreshold = PositiveInt.one,
+  staticSynchronizerParameters = StaticSynchronizerParameters.defaultsWithoutKMS(ProtocolVersion.forSynchronizer)
+)
+
+participantNode1.synchronizers.connect_local(globalSequencer, alias = "global")
+
+println("--- Uploading DamlFirstApp-main DAR Package ---")
+participantNode1.dars.upload("DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar")
+
+println("--- Provisioning Ledger Parties ---")
+val issuerParty = participantNode1.parties.enable("AssetIssuer", synchronizer = Some("global"), synchronizeParticipants = Seq(participantNode1))
+val aliceParty  = participantNode1.parties.enable("Alice", synchronizer = Some("global"), synchronizeParticipants = Seq(participantNode1))
+
+println("--- Onboarding User Accounts & Granting Rights ---")
+
+participantNode1.ledger_api.users.create(
+  id = "issuer_user",
+  primaryParty = Some(issuerParty),
+  actAs = Set(issuerParty),
+  readAs = Set(issuerParty)
+)
+
+participantNode1.ledger_api.users.create(
+  id = "alice_user",
+  primaryParty = Some(aliceParty),
+  actAs = Set(aliceParty),
+  readAs = Set(aliceParty)
+)
+```
+
+### [Main.daml](#main-daml)
+```daml
+module Main where
+
+type AssetId = ContractId Asset
+
+template Asset
+  with
+    issuer : Party
+    owner  : Party
+    name   : Text
+  where
+    ensure name /= ""
+    signatory issuer
+    observer owner
+    choice Give : AssetId
+      with
+        newOwner : Party
+      controller owner
+      do create this with
+           owner = newOwner
 ```
