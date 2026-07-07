@@ -1,0 +1,53 @@
+import com.digitalasset.canton.config.RequireTypes.PositiveInt
+import com.digitalasset.canton.admin.api.client.data.StaticSynchronizerParameters
+import com.digitalasset.canton.version.ProtocolVersion
+
+// 1. Boot up the node infrastructure
+nodes.local.start()
+
+// 2. Initialize the blind coordination network (Sequencer + Mediator)
+bootstrap.synchronizer(
+  synchronizerName = "global",
+  sequencers = Seq(globalSequencer),
+  mediators = Seq(globalMediator),
+  synchronizerOwners = Seq(globalSequencer, globalMediator),
+  synchronizerThreshold = PositiveInt.one,
+  staticSynchronizerParameters = StaticSynchronizerParameters.defaultsWithoutKMS(ProtocolVersion.forSynchronizer)
+)
+
+// 3. Connect the physical participant node to the network grid
+participantNode1.synchronizers.connect_local(globalSequencer, alias = "global")
+
+// 4. Upload your compiled Daml 3.x smart contract DAR file
+println("--- Uploading DamlFirstApp-main DAR Package ---")
+participantNode1.dars.upload("DamlFirstApp/main/.daml/dist/DamlFirstApp-main-0.0.1.dar")
+
+// 5. Allocate the logical network identities required by Main.daml
+println("--- Provisioning Ledger Parties ---")
+val issuerParty = participantNode1.parties.enable("AssetIssuer", synchronizer = Some("global"), synchronizeParticipants = Seq(participantNode1))
+val aliceParty  = participantNode1.parties.enable("Alice", synchronizer = Some("global"), synchronizeParticipants = Seq(participantNode1))
+
+// 6. Onboard individual User Accounts with explicit Ledger API capabilities
+println("--- Onboarding User Accounts & Granting Rights ---")
+
+// Create Issuer User Account
+participantNode1.ledger_api.users.create(
+  id = "issuer_user",
+  primaryParty = Some(issuerParty),
+  actAs = Set(issuerParty),
+  readAs = Set(issuerParty)
+)
+
+// Create Alice User Account
+participantNode1.ledger_api.users.create(
+  id = "alice_user",
+  primaryParty = Some(aliceParty),
+  actAs = Set(aliceParty),
+  readAs = Set(aliceParty)
+)
+
+println("=============================================")
+println("===          SANDBOX SYSTEM READY         ===")
+println("=============================================")
+println(s"participantNode1: parties=${participantNode1.parties.list().map(_.party.toProtoPrimitive)}")
+println(s"Onboarded Users : ${participantNode1.ledger_api.users.list().users.map(_.id)}")
